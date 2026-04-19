@@ -2,6 +2,9 @@
 
 A full-stack personal finance web application built with Python (Flask), SQLite, Bootstrap 5, and Chart.js.
 
+Video Demo: https://youtu.be/NRKSxGpdSk0
+
+
 ---
 
 ## 📁 Project Structure
