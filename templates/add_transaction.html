@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Add Transaction — FinTrack{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">Add Transaction</h2>
+    <p class="page-subtitle">Record a new income or expense</p>
+</div>
+
+<div style="max-width:580px;">
+<div class="card-glass">
+    <form method="POST" id="txnForm">
+
+        <!-- Type Toggle -->
+        <div style="margin-bottom:24px;">
+            <label>Transaction Type</label>
+            <div id="typeToggle" style="display:flex; gap:8px;">
+                <button type="button" class="type-btn active" data-value="expense" onclick="setType('expense')">
+                    <i class="bi bi-arrow-up-circle me-1"></i> Expense
+                </button>
+                <button type="button" class="type-btn" data-value="income" onclick="setType('income')">
+                    <i class="bi bi-arrow-down-circle me-1"></i> Income
+                </button>
+            </div>
+            <input type="hidden" name="type" id="typeInput" value="expense">
+        </div>
+
+        <!-- Amount -->
+        <div style="margin-bottom:18px;">
+            <label>Amount (₹)</label>
+            <input type="number" name="amount" step="0.01" min="0.01"
+                   class="form-control-dark w-100" placeholder="0.00" required>
+        </div>
+
+        <!-- Category -->
+        <div style="margin-bottom:18px;">
+            <label>Category</label>
+            <select name="category" id="categorySelect" class="form-select-dark w-100" required>
+                <option value="" disabled selected>Select a category</option>
+                <!-- Expense categories (shown by default) -->
+                <optgroup label="Expense Categories" id="expCats">
+                    <option>Food & Dining</option>
+                    <option>Rent & Housing</option>
+                    <option>Travel & Transport</option>
+                    <option>Shopping</option>
+                    <option>Entertainment</option>
+                    <option>Healthcare</option>
+                    <option>Education</option>
+                    <option>Utilities</option>
+                    <option>Insurance</option>
+                    <option>Personal Care</option>
+                    <option>Subscriptions</option>
+                    <option>Other Expense</option>
+                </optgroup>
+                <!-- Income categories (hidden by default) -->
+                <optgroup label="Income Categories" id="incCats" style="display:none;">
+                    <option>Salary</option>
+                    <option>Freelance</option>
+                    <option>Business</option>
+                    <option>Investment</option>
+                    <option>Gift</option>
+                    <option>Other Income</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <!-- Date -->
+        <div style="margin-bottom:18px;">
+            <label>Date</label>
+            <input type="date" name="date" value="{{ today }}"
+                   class="form-control-dark w-100" required>
+        </div>
+
+        <!-- Description -->
+        <div style="margin-bottom:28px;">
+            <label>Description <span style="opacity:0.5;">(optional)</span></label>
+            <input type="text" name="description"
+                   class="form-control-dark w-100" placeholder="e.g., Monthly groceries">
+        </div>
+
+        <div class="d-flex gap-3">
+            <button type="submit" class="btn-gold flex-grow-1" style="padding:12px;">
+                <i class="bi bi-check-lg me-1"></i> Save Transaction
+            </button>
+            <a href="{{ url_for('transactions') }}" class="btn-ghost" style="padding:12px 20px;">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+</div>
+
+<style>
+.type-btn {
+    flex: 1;
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--bg-glass);
+    color: var(--text-2);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.type-btn.active[data-value="expense"] {
+    background: rgba(224,94,109,0.15);
+    border-color: rgba(224,94,109,0.4);
+    color: var(--danger);
+}
+
+.type-btn.active[data-value="income"] {
+    background: rgba(79,200,160,0.15);
+    border-color: rgba(79,200,160,0.4);
+    color: var(--accent2);
+}
+</style>
+
+<script>
+function setType(type) {
+    // Update hidden input
+    document.getElementById('typeInput').value = type;
+
+    // Update button styles
+    document.querySelectorAll('.type-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.value === type);
+    });
+
+    // Show/hide category groups
+    document.getElementById('expCats').style.display = (type === 'expense') ? '' : 'none';
+    document.getElementById('incCats').style.display = (type === 'income')  ? '' : 'none';
+
+    // Reset category selection
+    document.getElementById('categorySelect').value = '';
+}
+</script>
+{% endblock %}

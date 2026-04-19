@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FinTrack{% endblock %}</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts: Playfair Display + DM Sans -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* ── GLOBAL TOKENS ── */
+        :root {
+            --bg-deep:   #0a0c10;
+            --bg-card:   #111520;
+            --bg-glass:  rgba(255,255,255,0.04);
+            --border:    rgba(255,255,255,0.07);
+            --accent:    #c8a96e;        /* warm gold */
+            --accent2:   #4fc8a0;        /* mint green */
+            --danger:    #e05e6d;
+            --text-1:    #f0ece4;
+            --text-2:    #8a8fa0;
+            --sidebar-w: 240px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg-deep);
+            color: var(--text-1);
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14.5px;
+            min-height: 100vh;
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+            position: fixed; top: 0; left: 0;
+            width: var(--sidebar-w);
+            height: 100vh;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            z-index: 100;
+            padding: 0;
+        }
+
+        .sidebar-brand {
+            padding: 28px 24px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .sidebar-brand h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            color: var(--accent);
+            letter-spacing: 0.5px;
+        }
+
+        .sidebar-brand span {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 0.7rem;
+            color: var(--text-2);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 20px 12px;
+            overflow-y: auto;
+        }
+
+        .nav-label {
+            font-size: 0.65rem;
+            color: var(--text-2);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            padding: 12px 12px 6px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            color: var(--text-2);
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.2s;
+            margin-bottom: 2px;
+        }
+
+        .nav-link:hover { background: var(--bg-glass); color: var(--text-1); }
+        .nav-link.active { background: rgba(200,169,110,0.12); color: var(--accent); }
+        .nav-link i { font-size: 1.1rem; width: 20px; text-align: center; }
+
+        .sidebar-footer {
+            padding: 20px 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .user-chip {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: var(--bg-glass);
+        }
+
+        .user-avatar {
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #a07840);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 0.8rem;
+            color: var(--bg-deep);
+            flex-shrink: 0;
+        }
+
+        .user-name { font-size: 0.85rem; font-weight: 600; color: var(--text-1); }
+        .user-role { font-size: 0.7rem; color: var(--text-2); }
+
+        .logout-btn {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 14px; margin-top: 8px;
+            border-radius: 8px; width: 100%;
+            background: rgba(224,94,109,0.1);
+            color: var(--danger);
+            border: none; cursor: pointer;
+            font-size: 0.85rem; font-weight: 500;
+            transition: background 0.2s;
+            text-decoration: none;
+        }
+        .logout-btn:hover { background: rgba(224,94,109,0.2); color: var(--danger); }
+
+        /* ── MAIN CONTENT ── */
+        .main {
+            margin-left: var(--sidebar-w);
+            min-height: 100vh;
+            padding: 32px;
+        }
+
+        .page-header {
+            margin-bottom: 28px;
+        }
+
+        .page-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.75rem;
+            color: var(--text-1);
+        }
+
+        .page-subtitle { color: var(--text-2); font-size: 0.875rem; }
+
+        /* ── CARDS ── */
+        .card-glass {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        /* ── STAT CARDS ── */
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 22px;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .stat-card:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.13); }
+
+        .stat-card .icon {
+            width: 44px; height: 44px;
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.25rem;
+            margin-bottom: 14px;
+        }
+
+        .stat-card .label {
+            font-size: 0.72rem;
+            color: var(--text-2);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+
+        .stat-card .value {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.75rem;
+            line-height: 1;
+        }
+
+        .stat-card .trend {
+            font-size: 0.75rem;
+            margin-top: 8px;
+            color: var(--text-2);
+        }
+
+        /* ── BADGES ── */
+        .badge-income  { background: rgba(79,200,160,0.15); color: var(--accent2); }
+        .badge-expense { background: rgba(224,94,109,0.15); color: var(--danger); }
+        .badge-cat     { background: rgba(200,169,110,0.12); color: var(--accent); font-size: 0.72rem; padding: 3px 8px; border-radius: 20px; }
+
+        /* ── TABLE ── */
+        .table-dark-custom {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 4px;
+        }
+
+        .table-dark-custom thead th {
+            font-size: 0.68rem;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--text-2);
+            padding: 0 16px 10px;
+            border: none;
+            font-weight: 500;
+        }
+
+        .table-dark-custom tbody tr {
+            background: var(--bg-card);
+            border-radius: 10px;
+        }
+
+        .table-dark-custom tbody td {
+            padding: 14px 16px;
+            border: none;
+            vertical-align: middle;
+        }
+
+        .table-dark-custom tbody tr td:first-child { border-radius: 10px 0 0 10px; }
+        .table-dark-custom tbody tr td:last-child  { border-radius: 0 10px 10px 0; }
+
+        .table-dark-custom tbody tr:hover td { background: #161c28; }
+
+        /* ── FORMS ── */
+        .form-control-dark, .form-select-dark {
+            background: var(--bg-glass);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-1);
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-control-dark:focus, .form-select-dark:focus {
+            background: var(--bg-glass);
+            border-color: var(--accent);
+            color: var(--text-1);
+            box-shadow: 0 0 0 3px rgba(200,169,110,0.12);
+            outline: none;
+        }
+
+        .form-control-dark::placeholder { color: var(--text-2); }
+        .form-select-dark option { background: var(--bg-card); color: var(--text-1); }
+
+        label { color: var(--text-2); font-size: 0.78rem; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; display: block; }
+
+        /* ── BUTTONS ── */
+        .btn-gold {
+            background: linear-gradient(135deg, var(--accent), #a07840);
+            color: var(--bg-deep);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 22px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+
+        .btn-gold:hover { opacity: 0.9; transform: translateY(-1px); color: var(--bg-deep); }
+
+        .btn-ghost {
+            background: var(--bg-glass);
+            color: var(--text-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 22px;
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s;
+        }
+        .btn-ghost:hover { color: var(--text-1); border-color: rgba(255,255,255,0.15); }
+
+        .btn-danger-ghost {
+            background: rgba(224,94,109,0.08);
+            color: var(--danger);
+            border: 1px solid rgba(224,94,109,0.2);
+            border-radius: 8px;
+            padding: 5px 12px;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-danger-ghost:hover { background: rgba(224,94,109,0.18); }
+
+        /* ── FLASH MESSAGES ── */
+        .flash-msg {
+            padding: 12px 18px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 0.875rem;
+            display: flex; align-items: center; gap: 10px;
+        }
+
+        .flash-success { background: rgba(79,200,160,0.12); border: 1px solid rgba(79,200,160,0.25); color: var(--accent2); }
+        .flash-error   { background: rgba(224,94,109,0.12); border: 1px solid rgba(224,94,109,0.25); color: var(--danger); }
+
+        /* ── AMOUNT COLORS ── */
+        .amount-income  { color: var(--accent2); font-weight: 600; }
+        .amount-expense { color: var(--danger);  font-weight: 600; }
+        .amount-balance { color: var(--accent);  font-weight: 600; }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-2);
+        }
+        .empty-state i { font-size: 3rem; opacity: 0.3; margin-bottom: 16px; }
+        .empty-state p { font-size: 0.9rem; }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+        /* ── DIVIDER ── */
+        .divider { border-color: var(--border); margin: 20px 0; }
+
+        /* ── TOAST NOTIFICATIONS (fixed top-right) ── */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 24px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 340px;
+            pointer-events: none;
+        }
+
+        .flash-msg {
+            padding: 13px 18px;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            pointer-events: all;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            animation: slideInRight 0.3s ease, fadeOut 0.4s ease 3.8s forwards;
+        }
+
+        .flash-success {
+            background: rgba(17, 28, 22, 0.97);
+            border: 1px solid rgba(79,200,160,0.35);
+            color: var(--accent2);
+        }
+
+        .flash-error {
+            background: rgba(28, 14, 16, 0.97);
+            border: 1px solid rgba(224,94,109,0.35);
+            color: #f08090;
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(60px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateX(0); }
+            to   { opacity: 0; transform: translateX(40px); }
+        }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .main { margin-left: 0; padding: 20px 16px; }
+            .toast-container { right: 12px; left: 12px; max-width: none; }
+        }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<!-- ── TOAST NOTIFICATIONS (fixed top-right) ── -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="toast-container" id="toastContainer">
+        {% for category, message in messages %}
+        <div class="flash-msg flash-{{ category }}">
+            <i class="bi bi-{% if category == 'success' %}check-circle-fill{% else %}exclamation-circle-fill{% endif %}"></i>
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+{% endwith %}
+
+{% if session.user_id %}
+<!-- ── SIDEBAR ── -->
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <h1>FinTrack</h1>
+        <span>Expense Dashboard</span>
+    </div>
+
+    <nav class="sidebar-nav">
+        <div class="nav-label">Main</div>
+        <a href="{{ url_for('dashboard') }}"    class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+            <i class="bi bi-grid-1x2"></i> Dashboard
+        </a>
+        <a href="{{ url_for('transactions') }}" class="nav-link {% if request.endpoint in ['transactions','add_transaction'] %}active{% endif %}">
+            <i class="bi bi-arrow-left-right"></i> Transactions
+        </a>
+        <a href="{{ url_for('add_transaction') }}" class="nav-link">
+            <i class="bi bi-plus-circle"></i> Add Transaction
+        </a>
+
+        <div class="nav-label" style="margin-top:8px">Analytics</div>
+        <a href="{{ url_for('insights') }}" class="nav-link {% if request.endpoint == 'insights' %}active{% endif %}">
+            <i class="bi bi-graph-up-arrow"></i> Insights
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="user-chip">
+            <div class="user-avatar">{{ session.username[0].upper() }}</div>
+            <div>
+                <div class="user-name">{{ session.username }}</div>
+                <div class="user-role">Personal</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn mt-2">
+            <i class="bi bi-box-arrow-left"></i> Sign Out
+        </a>
+    </div>
+</aside>
+{% endif %}
+
+<!-- ── MAIN ── -->
+<main class="main {% if not session.user_id %}ms-0{% endif %}">
+    {% block content %}{% endblock %}
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Auto-remove toast notifications after 4 seconds
+    document.addEventListener('DOMContentLoaded', function () {
+        const toasts = document.querySelectorAll('.flash-msg');
+        toasts.forEach(function (toast) {
+            setTimeout(function () {
+                toast.style.transition = 'opacity 0.4s, transform 0.4s';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(40px)';
+                setTimeout(() => toast.remove(), 400);
+            }, 4000);
+        });
+    });
+</script>
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

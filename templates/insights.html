@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+{% block title %}Insights — FinTrack{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h2 class="page-title">Insights</h2>
+    <p class="page-subtitle">Smart analysis of your spending patterns</p>
+</div>
+
+<!-- ── SMART INSIGHTS CARDS ── -->
+<div id="insightsContainer" class="row g-3 mb-4">
+    <!-- Filled dynamically by JS -->
+    <div class="col-12">
+        <div class="card-glass" style="text-align:center; padding:32px; color:var(--text-2);">
+            <i class="bi bi-arrow-repeat" style="font-size:1.5rem; animation:spin 1s linear infinite;"></i>
+            <p style="margin-top:10px; font-size:0.85rem;">Loading insights...</p>
+        </div>
+    </div>
+</div>
+
+<!-- ── CHARTS ROW ── -->
+<div class="row g-3 mb-4">
+    <!-- Bar: Category spending -->
+    <div class="col-md-6">
+        <div class="card-glass h-100">
+            <h6 style="font-family:'Playfair Display',serif; font-size:1rem; margin-bottom:4px;">Category Breakdown</h6>
+            <p style="font-size:0.78rem; color:var(--text-2); margin-bottom:16px;">Expense amounts by category</p>
+            <div style="position:relative; height:260px;">
+                <canvas id="catBarChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Line: Monthly trend -->
+    <div class="col-md-6">
+        <div class="card-glass h-100">
+            <h6 style="font-family:'Playfair Display',serif; font-size:1rem; margin-bottom:4px;">Spending Trend</h6>
+            <p style="font-size:0.78rem; color:var(--text-2); margin-bottom:16px;">Monthly expenses over time</p>
+            <div style="position:relative; height:260px;">
+                <canvas id="trendLineChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── THIS MONTH VS LAST MONTH ── -->
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card-glass">
+            <h6 style="font-family:'Playfair Display',serif; font-size:1rem; margin-bottom:16px;">Month Comparison</h6>
+            <div id="monthCompare" style="color:var(--text-2); font-size:0.85rem;">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Category % list -->
+    <div class="col-md-6">
+        <div class="card-glass">
+            <h6 style="font-family:'Playfair Display',serif; font-size:1rem; margin-bottom:16px;">Spending Breakdown %</h6>
+            <div id="catList">Loading...</div>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.insight-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    transition: border-color 0.2s;
+}
+.insight-card:hover { border-color: rgba(200,169,110,0.3); }
+
+.insight-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.insight-text { font-size: 0.875rem; color: var(--text-1); }
+.insight-sub  { font-size: 0.75rem;  color: var(--text-2); margin-top: 2px; }
+
+.progress-bar-custom {
+    height: 6px;
+    background: var(--bg-glass);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 6px;
+}
+.progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.8s ease;
+}
+</style>
+
+<script>
+Chart.defaults.color = '#8a8fa0';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.font.family = 'DM Sans';
+
+const PALETTE = ['#c8a96e','#4fc8a0','#e05e6d','#6ea8c8','#c86eb0','#a0c86e','#c88c6e','#6e7cc8'];
+
+// ── Load smart insights ──
+async function loadInsights() {
+    const res  = await fetch('/api/insights_data');
+    const data = await res.json();
+
+    const container = document.getElementById('insightsContainer');
+    container.innerHTML = '';
+
+    if (!data.insights.length) {
+        container.innerHTML = `<div class="col-12">
+            <div class="card-glass" style="text-align:center; padding:40px; color:var(--text-2);">
+                <i class="bi bi-bar-chart" style="font-size:2rem; opacity:0.3; display:block; margin-bottom:12px;"></i>
+                <p>Add some transactions to see insights here!</p>
+            </div>
+        </div>`;
+        return;
+    }
+
+    // Top category insight
+    const top = data.insights[0];
+    const insights = [
+        {
+            icon: '🏆', bg: 'rgba(200,169,110,0.12)',
+            text: `You spend most on <strong>${top.category}</strong>`,
+            sub: `${top.percentage}% of total expenses — ₹${top.amount.toFixed(2)}`
+        }
+    ];
+
+    // High spending alert
+    if (top.percentage > 40) {
+        insights.push({
+            icon: '⚠️', bg: 'rgba(224,94,109,0.10)',
+            text: `High concentration on <strong>${top.category}</strong>`,
+            sub: `Consider diversifying or reducing ${top.category} spending`
+        });
+    }
+
+    // Month over month
+    if (data.last_month > 0) {
+        const diff   = data.this_month - data.last_month;
+        const pct    = Math.abs((diff / data.last_month) * 100).toFixed(1);
+        const up     = diff > 0;
+        insights.push({
+            icon: up ? '📈' : '📉',
+            bg: up ? 'rgba(224,94,109,0.10)' : 'rgba(79,200,160,0.10)',
+            text: up
+                ? `Spending is up <strong>${pct}%</strong> vs last month`
+                : `Great! Spending down <strong>${pct}%</strong> vs last month`,
+            sub: `This month: ₹${data.this_month.toFixed(2)} | Last month: ₹${data.last_month.toFixed(2)}`
+        });
+    }
+
+    // Savings insight
+    insights.push({
+        icon: '💡', bg: 'rgba(79,200,160,0.08)',
+        text: `Total tracked expenses: <strong>₹${data.total_expense.toFixed(2)}</strong>`,
+        sub: `Across ${data.insights.length} spending categories`
+    });
+
+    // Render cards
+    container.innerHTML = insights.map(ins => `
+        <div class="col-md-6">
+            <div class="insight-card">
+                <div class="insight-icon" style="background:${ins.bg}; font-size:1.3rem;">
+                    ${ins.icon}
+                </div>
+                <div>
+                    <div class="insight-text">${ins.text}</div>
+                    <div class="insight-sub">${ins.sub}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    // Category % list
+    const catList = document.getElementById('catList');
+    catList.innerHTML = data.insights.map((ins, i) => `
+        <div style="margin-bottom:14px;">
+            <div class="d-flex justify-content-between" style="margin-bottom:4px;">
+                <span style="font-size:0.85rem; color:var(--text-1);">${ins.category}</span>
+                <span style="font-size:0.85rem; color:var(--text-2);">${ins.percentage}% — ₹${ins.amount.toFixed(2)}</span>
+            </div>
+            <div class="progress-bar-custom">
+                <div class="progress-fill" style="width:${ins.percentage}%; background:${PALETTE[i % PALETTE.length]};"></div>
+            </div>
+        </div>
+    `).join('');
+
+    // Month compare
+    const monthEl = document.getElementById('monthCompare');
+    monthEl.innerHTML = `
+        <div class="row g-3">
+            <div class="col-6">
+                <div style="font-size:0.7rem; color:var(--text-2); letter-spacing:2px; text-transform:uppercase;">This Month</div>
+                <div style="font-size:1.6rem; font-family:'Playfair Display',serif; color:var(--danger); margin-top:4px;">
+                    ₹${data.this_month.toFixed(2)}
+                </div>
+            </div>
+            <div class="col-6">
+                <div style="font-size:0.7rem; color:var(--text-2); letter-spacing:2px; text-transform:uppercase;">Last Month</div>
+                <div style="font-size:1.6rem; font-family:'Playfair Display',serif; color:var(--text-2); margin-top:4px;">
+                    ₹${data.last_month.toFixed(2)}
+                </div>
+            </div>
+        </div>
+        <div style="font-size:0.78rem; color:var(--text-2); margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+            ${data.last_month > 0
+                ? (data.this_month > data.last_month
+                    ? `⬆ Spending increased by ₹${(data.this_month - data.last_month).toFixed(2)}`
+                    : `⬇ Spending decreased by ₹${(data.last_month - data.this_month).toFixed(2)}`)
+                : 'No data from last month yet.'}
+        </div>
+    `;
+}
+
+// ── Category Bar Chart ──
+async function loadCatBar() {
+    const res  = await fetch('/api/category_spending');
+    const data = await res.json();
+    if (!data.labels.length) return;
+
+    new Chart(document.getElementById('catBarChart'), {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Expenses',
+                data: data.values,
+                backgroundColor: PALETTE,
+                borderRadius: 6,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { callback: v => '₹' + v.toLocaleString(), font: { size: 10 } }
+                }
+            }
+        }
+    });
+}
+
+// ── Expense Trend Line Chart ──
+async function loadTrendLine() {
+    const res  = await fetch('/api/monthly_trends');
+    const data = await res.json();
+    if (!data.labels.length) return;
+
+    new Chart(document.getElementById('trendLineChart'), {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Expenses',
+                data: data.expense,
+                borderColor: '#e05e6d',
+                backgroundColor: 'rgba(224,94,109,0.08)',
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: '#e05e6d',
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { callback: v => '₹' + v.toLocaleString(), font: { size: 10 } }
+                }
+            }
+        }
+    });
+}
+
+// Run all
+loadInsights();
+loadCatBar();
+loadTrendLine();
+</script>
+{% endblock %}

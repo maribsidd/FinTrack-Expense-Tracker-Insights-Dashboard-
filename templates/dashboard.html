@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — FinTrack{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header d-flex align-items-center justify-content-between">
+    <div>
+        <h2 class="page-title">Dashboard</h2>
+        <p class="page-subtitle">Overview of your finances</p>
+    </div>
+    <a href="{{ url_for('add_transaction') }}" class="btn-gold">
+        <i class="bi bi-plus-lg me-1"></i> Add Transaction
+    </a>
+</div>
+
+<!-- ── STAT CARDS ── -->
+<div class="row g-3 mb-4">
+    <!-- Balance -->
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="icon" style="background:rgba(200,169,110,0.12);">
+                <i class="bi bi-wallet2" style="color:var(--accent);"></i>
+            </div>
+            <div class="label">Total Balance</div>
+            <div class="value amount-balance">
+                ₹{{ "{:,.2f}".format(balance) }}
+            </div>
+            <div class="trend">
+                <i class="bi bi-info-circle"></i> Income minus expenses
+            </div>
+        </div>
+    </div>
+
+    <!-- Income -->
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="icon" style="background:rgba(79,200,160,0.12);">
+                <i class="bi bi-arrow-down-circle" style="color:var(--accent2);"></i>
+            </div>
+            <div class="label">Total Income</div>
+            <div class="value amount-income">
+                ₹{{ "{:,.2f}".format(total_income) }}
+            </div>
+            <div class="trend" style="color:var(--accent2);">
+                <i class="bi bi-arrow-up"></i> All time income
+            </div>
+        </div>
+    </div>
+
+    <!-- Expenses -->
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="icon" style="background:rgba(224,94,109,0.12);">
+                <i class="bi bi-arrow-up-circle" style="color:var(--danger);"></i>
+            </div>
+            <div class="label">Total Expenses</div>
+            <div class="value amount-expense">
+                ₹{{ "{:,.2f}".format(total_expenses) }}
+            </div>
+            <div class="trend" style="color:var(--danger);">
+                <i class="bi bi-arrow-down"></i> All time spending
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── CHARTS ROW ── -->
+<div class="row g-3 mb-4">
+    <!-- Category Pie Chart -->
+    <div class="col-md-5">
+        <div class="card-glass h-100">
+            <div style="margin-bottom:18px;">
+                <h6 style="font-family:'Playfair Display',serif; font-size:1rem;">Spending by Category</h6>
+                <p style="font-size:0.78rem; color:var(--text-2);">Expense breakdown</p>
+            </div>
+            <div style="position:relative; height:220px;">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Trend Bar Chart -->
+    <div class="col-md-7">
+        <div class="card-glass h-100">
+            <div style="margin-bottom:18px;">
+                <h6 style="font-family:'Playfair Display',serif; font-size:1rem;">Monthly Trends</h6>
+                <p style="font-size:0.78rem; color:var(--text-2);">Last 6 months income vs expenses</p>
+            </div>
+            <div style="position:relative; height:220px;">
+                <canvas id="monthlyChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── RECENT TRANSACTIONS ── -->
+<div class="card-glass">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h6 style="font-family:'Playfair Display',serif; font-size:1rem;">Recent Transactions</h6>
+            <p style="font-size:0.78rem; color:var(--text-2);">Latest 5 entries</p>
+        </div>
+        <a href="{{ url_for('transactions') }}" class="btn-ghost" style="font-size:0.8rem; padding:7px 16px;">
+            View All <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+
+    {% if recent %}
+    <table class="table-dark-custom">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Type</th>
+                <th style="text-align:right;">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in recent %}
+            <tr>
+                <td style="color:var(--text-2); font-size:0.85rem;">{{ t['date'] }}</td>
+                <td><span class="badge-cat">{{ t['category'] }}</span></td>
+                <td style="color:var(--text-2); font-size:0.85rem;">{{ t['description'] or '—' }}</td>
+                <td>
+                    <span class="badge-{{ t['type'] }}" style="font-size:0.75rem; padding:3px 10px; border-radius:20px; font-weight:500;">
+                        {{ t['type'].capitalize() }}
+                    </span>
+                </td>
+                <td style="text-align:right;" class="amount-{{ t['type'] }}">
+                    {{ '+' if t['type'] == 'income' else '-' }}₹{{ "{:,.2f}".format(t['amount']) }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <div><i class="bi bi-receipt d-block"></i></div>
+        <p>No transactions yet. <a href="{{ url_for('add_transaction') }}" style="color:var(--accent);">Add one!</a></p>
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// ── Chart.js global defaults ──
+Chart.defaults.color = '#8a8fa0';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.font.family = 'DM Sans';
+
+const GOLD    = '#c8a96e';
+const MINT    = '#4fc8a0';
+const DANGER  = '#e05e6d';
+const PALETTE = ['#c8a96e','#4fc8a0','#e05e6d','#6ea8c8','#c86eb0','#a0c86e','#c88c6e','#6e7cc8'];
+
+// ── Category Doughnut ──
+async function loadCategoryChart() {
+    const res  = await fetch('/api/category_spending');
+    const data = await res.json();
+
+    if (!data.labels.length) return;  // no data yet
+
+    new Chart(document.getElementById('categoryChart'), {
+        type: 'doughnut',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                data: data.values,
+                backgroundColor: PALETTE,
+                borderWidth: 0,
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            cutout: '65%',
+            plugins: {
+                legend: { position: 'right', labels: { boxWidth: 10, padding: 14, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => ` ₹${ctx.raw.toFixed(2)}`
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ── Monthly Trends Bar ──
+async function loadMonthlyChart() {
+    const res  = await fetch('/api/monthly_trends');
+    const data = await res.json();
+
+    if (!data.labels.length) return;
+
+    new Chart(document.getElementById('monthlyChart'), {
+        type: 'bar',
+        data: {
+            labels: data.labels,
+            datasets: [
+                {
+                    label: 'Income',
+                    data: data.income,
+                    backgroundColor: 'rgba(79,200,160,0.7)',
+                    borderRadius: 6,
+                    borderSkipped: false
+                },
+                {
+                    label: 'Expenses',
+                    data: data.expense,
+                    backgroundColor: 'rgba(224,94,109,0.7)',
+                    borderRadius: 6,
+                    borderSkipped: false
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { boxWidth: 10, font: { size: 11 } } },
+                tooltip: {
+                    callbacks: { label: (ctx) => ` ₹${ctx.raw.toFixed(2)}` }
+                }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: {
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { callback: (v) => '₹' + v.toLocaleString() }
+                }
+            }
+        }
+    });
+}
+
+loadCategoryChart();
+loadMonthlyChart();
+</script>
+{% endblock %}
